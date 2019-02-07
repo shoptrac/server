@@ -1,1 +1,2 @@
 mongo_url: "mongodb://localhost"
+jwt_secret: "secret"

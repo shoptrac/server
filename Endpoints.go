@@ -4,7 +4,10 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
+	"net/http"
 
+	"github.com/auth0/go-jwt-middleware"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/mongodb/mongo-go-driver/mongo"
 	"gopkg.in/yaml.v2"
@@ -15,13 +18,16 @@ type LongPoll struct {
 }
 
 type Endpoints struct {
-	Rtr *mux.Router
-	lp  *LongPoll
-	db  *mongo.Database
+	Rtr    *mux.Router
+	lp     *LongPoll
+	db     *mongo.Database
+	JWTKey []byte
+	JWTMW  *jwtmiddleware.JWTMiddleware
 }
 
 type Config struct {
-	MongoURL string `yaml:"mongo_url"`
+	MongoURL  string `yaml:"mongo_url"`
+	JWTSecret string `yaml:"jwt_secret"`
 }
 
 func NewEndPoints(r *mux.Router) *Endpoints {
@@ -29,11 +35,14 @@ func NewEndPoints(r *mux.Router) *Endpoints {
 	c.readConfig()
 
 	database := c.connectMongo()
+	secret, jwtmd := c.initJWT()
 
 	ep := &Endpoints{
-		Rtr: r,
-		lp:  nil,
-		db:  database,
+		Rtr:    r,
+		lp:     nil,
+		db:     database,
+		JWTKey: secret,
+		JWTMW:  jwtmd,
 	}
 
 	return ep
@@ -42,7 +51,7 @@ func NewEndPoints(r *mux.Router) *Endpoints {
 func (e *Endpoints) RegisterEndpoints() {
 
 	// Dashboard Endpoints
-	e.Rtr.HandleFunc("/dashboard/control", e.sendControl).Methods("GET")
+	e.Rtr.Handle("/dashboard/control", e.JWTMW.Handler(http.HandlerFunc(e.sendControl))).Methods("GET")
 	e.Rtr.HandleFunc("/dashboard/login", e.loginUser).Methods("POST")
 
 	// Device Endpoints
@@ -84,4 +93,17 @@ func (c *Config) connectMongo() *mongo.Database {
 	database := client.Database("ShopTrac") /*.Collection("users")*/
 
 	return database
+}
+
+func (c *Config) initJWT() ([]byte, *jwtmiddleware.JWTMiddleware) {
+	jwtSecret := []byte(c.JWTSecret)
+
+	jwtmw := jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return jwtSecret, nil
+		},
+		SigningMethod: jwt.SigningMethodHS256,
+	})
+
+	return jwtSecret, jwtmw
 }

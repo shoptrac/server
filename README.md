@@ -5,8 +5,10 @@
 Go packages you will need
 ```
 go get gopkg.in/yaml.v2
-go get gopkg.in/mgo.v2/bson
 go get github.com/gorilla/mux
+go get github.com/dgrijalva/jwt-go
+go get github.com/auth0/go-jwt-middleware
+go get github.com/mongodb/mongo-go-driver/bson
 go get github.com/mongodb/mongo-go-driver/mongo
 ```
 
