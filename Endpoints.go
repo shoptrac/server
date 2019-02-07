@@ -1,7 +1,6 @@
 package main
 
 import (
-  "net/http"
   "github.com/gorilla/mux"
 )
 
@@ -24,10 +23,11 @@ func NewEndPoints(r *mux.Router) *Endpoints {
 }
 
 func (e *Endpoints) RegisterEndpoints() {
-  e.Rtr.HandleFunc("/dashboard/test", e.testFn).Methods("GET")
+  
+  // Dashboard Endpoints
   e.Rtr.HandleFunc("/dashboard/control", e.sendControl).Methods("GET")
 
-
+  // Device Endpoints
   e.Rtr.HandleFunc("/device/olp", e.openLongPoll).Methods("GET")
 }
 
