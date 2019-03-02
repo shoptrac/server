@@ -69,3 +69,27 @@ func (e *Endpoints) loginUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(ret)
 	}
 }
+
+// GET
+func (e *Endpoints) getAverageDuration(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	// get the average user visit duration (single value)
+}
+
+// GET
+func (e *Endpoints) getAverageVisitsPD(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	// get the average number of visits per day (single value)
+}
+
+// GET
+func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	// Get average # of people in the store broken up by hours of the day (9-5)
+}
+
+// GET
+func (e *Endpoints) getTrafficHistory(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	// Get a table with history (by day) of how many people, what kind of people came into the store. Past ~10 days?
+}

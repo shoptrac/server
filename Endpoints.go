@@ -51,11 +51,16 @@ func NewEndPoints(r *mux.Router) *Endpoints {
 func (e *Endpoints) RegisterEndpoints() {
 
 	// Dashboard Endpoints
-	e.Rtr.Handle("/dashboard/control", e.JWTMW.Handler(http.HandlerFunc(e.sendControl))).Methods("GET")
 	e.Rtr.HandleFunc("/dashboard/login", e.loginUser).Methods("POST")
+	e.Rtr.Handle("/dashboard/control", e.JWTMW.Handler(http.HandlerFunc(e.sendControl))).Methods("GET")
+	e.Rtr.Handle("/dashboard/averageDuration", e.JWTMW.Handler(http.HandlerFunc(e.getAverageDuration))).Methods("GET")
+	e.Rtr.Handle("/dashboard/averageVisitsPD", e.JWTMW.Handler(http.HandlerFunc(e.getAverageVisitsPD))).Methods("GET")
+	e.Rtr.Handle("/dashboard/peakHours", e.JWTMW.Handler(http.HandlerFunc(e.getPeakHours))).Methods("GET")
+	e.Rtr.Handle("/dashboard/history", e.JWTMW.Handler(http.HandlerFunc(e.getTrafficHistory))).Methods("GET")
 
 	// Device Endpoints
 	e.Rtr.HandleFunc("/device/olp", e.openLongPoll).Methods("GET")
+	e.Rtr.HandleFunc("/device/event", e.postEvent).Methods("POST")
 }
 
 func (e *Endpoints) setLongPoll(lp *LongPoll) {
