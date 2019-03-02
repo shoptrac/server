@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/mongodb/mongo-go-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // GET
@@ -29,15 +29,16 @@ func (e *Endpoints) loginUser(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}{}
 
-	mgoResult := struct {
-		Id       string `json:"_id" bson:"_id`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}{}
+	var mgoResult struct {
+		Email       string `bson:"email"`
+		DisplayName string `bson:"display_name"`
+		Password    string `bson:"password"`
+	}
 
 	ret := struct {
-		Token   string
-		Success bool
+		DisplayName string
+		Token       string
+		Success     bool
 	}{}
 
 	err := decoder.Decode(&params)
@@ -58,6 +59,7 @@ func (e *Endpoints) loginUser(w http.ResponseWriter, r *http.Request) {
 		// claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // Too lazy to make it expire
 
 		tokenString, _ := token.SignedString(e.JWTKey)
+		ret.DisplayName = mgoResult.DisplayName
 		ret.Token = tokenString
 		ret.Success = true
 

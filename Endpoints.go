@@ -9,7 +9,8 @@ import (
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"github.com/mongodb/mongo-go-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/yaml.v2"
 )
 
@@ -84,12 +85,7 @@ func (c *Config) readConfig() *Config {
 }
 
 func (c *Config) connectMongo() *mongo.Database {
-	client, err := mongo.NewClient(c.MongoURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = client.Connect(context.TODO())
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(c.MongoURL))
 
 	if err != nil {
 		log.Fatal(err)
