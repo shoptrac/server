@@ -24,11 +24,17 @@ type Endpoints struct {
 	db     *mongo.Database
 	JWTKey []byte
 	JWTMW  *jwtmiddleware.JWTMiddleware
+    Fau string
+    Fak string
+    Fas string
 }
 
 type Config struct {
 	MongoURL  string `yaml:"mongo_url"`
 	JWTSecret string `yaml:"jwt_secret"`
+	FaceApiUrl string `yaml:"face_api_url"`
+	FaceApiKey string `yaml:"face_api_key"`
+	FaceApiSecret string `yaml:"face_api_secret"`
 }
 
 func NewEndPoints(r *mux.Router) *Endpoints {
@@ -44,6 +50,9 @@ func NewEndPoints(r *mux.Router) *Endpoints {
 		db:     database,
 		JWTKey: secret,
 		JWTMW:  jwtmd,
+        Fau:    c.FaceApiUrl,
+        Fak:    c.FaceApiKey,
+        Fas:    c.FaceApiSecret,
 	}
 
 	return ep
