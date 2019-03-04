@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
-    "fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 const ENTER = 0
 const LEAVE = 1
+const NUM_RETRIES = 3
 
 // GET
 func (e *Endpoints) openLongPoll(w http.ResponseWriter, r *http.Request) {
@@ -30,14 +31,13 @@ func (e *Endpoints) openLongPoll(w http.ResponseWriter, r *http.Request) {
 
 // Types used for Face++ requests
 type Attributes struct {
-    Sex string `json:"gender"`
-    Age int `json:"age"`
+	Sex map[string]string `json:"gender"`
+	Age map[string]int    `json:"age"`
 }
 
 type Face struct {
-   Atbs Attributes `json:"attributes"`
+	Atbs Attributes `json:"attributes"`
 }
-
 
 // POST
 func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +47,7 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 		DeviceID  string `json:"device_id"`
 		Action    int    `json:"action"`
 		Timestamp int64  `json:"timestamp"`
-        Image     []byte `json:"image"`
+		Image     string `json:"image"`
 	}{}
 
 	ret := struct {
@@ -63,37 +63,56 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 	_, err = events.InsertOne(context.Background(),
 		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0)})
 
-    if params.Action == ENTER {
-	    json.NewEncoder(w).Encode(ret)
-        return
-    }
+	if params.Action == ENTER {
+		json.NewEncoder(w).Encode(ret)
+		return
+	}
 
-    url := e.Fau
-    url += fmt.Sprintf("?api_key=%s", e.Fak)
-    url += fmt.Sprintf("&api_secret=%s", e.Fas)
-    url += "&return_attributes=gender,age"
+	attempt := 1
 
-    // This needs to be changed so that the POST posts a multipart form data request with the image byte data
-    // API can be viewed at https://console.faceplusplus.com/documents/5679127
-    res, _ := http.Post(url)
-    defer res.Body.Close()
+	// Attempt NUM_RETRIES times to send out the requests, sometimes there's random issues
+	for attempt <= NUM_RETRIES {
+		res, _ := http.PostForm(e.Fau, url.Values{"api_key": {e.Fak}, "api_secret": {e.Fas}, "return_attributes": {"gender,age"},
+			"image_base64": {params.Image}})
 
-	body := struct {
-		Faces   []Face `json:"faces"`
-        Error   string `json:"error_message"`
-	}{}
+		defer res.Body.Close()
 
-    decoder = json.NewDecoder(res.Body)
-    err = decoder.Decode(&body)
+		body := struct {
+			Faces []Face `json:"faces"`
+			Error string `json:"error_message"`
+		}{}
 
-    age = body.Faces[0].Atbs.Age
-    sex = body.Faces[0].Atbs.Sex
+		decoder = json.NewDecoder(res.Body)
+		err = decoder.Decode(&body)
 
-	profiles := e.db.Collection("profiles")
+		if err != nil || len(body.Error) > 0 {
+			attempt += 1
 
-	_, err = profiles.InsertOne(context.Background(),
-		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0),
-        "age": age, "sex": sex})
+			if attempt == 4 {
+				ret.Success = false
+				log.Fatal(body.Error)
+				break
+			}
+
+			continue
+		}
+
+		if len(body.Faces) == 0 {
+			ret.Success = false
+			break
+		}
+
+		age := body.Faces[0].Atbs.Age["value"]
+		sex := body.Faces[0].Atbs.Sex["value"]
+
+		profiles := e.db.Collection("profiles")
+
+		_, err = profiles.InsertOne(context.Background(),
+			bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0),
+				"age": age, "sex": sex})
+
+		break
+	}
 
 	json.NewEncoder(w).Encode(ret)
 }
