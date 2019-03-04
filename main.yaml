@@ -1,5 +1,2 @@
 mongo_url: "mongodb://localhost"
 jwt_secret: "secret"
-face_api_url: "https://api-us.faceplusplus.com/facepp/v3/detect"
-face_api_key: "key"
-face_api_secret: "secret"
