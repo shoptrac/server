@@ -3,12 +3,24 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+type DateID struct {
+	Year  int32 `bson:"year"`
+	Month int32 `bson:"month"`
+	Day   int32 `bson:"day"`
+}
+
+type GAVPDResponse struct {
+	ID    DateID `bson:"_id"`
+	Count int    `bson:"count"`
+}
 
 // GET
 func (e *Endpoints) sendControl(w http.ResponseWriter, r *http.Request) {
@@ -80,8 +92,44 @@ func (e *Endpoints) getAverageDuration(w http.ResponseWriter, r *http.Request) {
 
 // GET
 func (e *Endpoints) getAverageVisitsPD(w http.ResponseWriter, r *http.Request) {
-	// TODO
 	// get the average number of visits per day (single value)
+
+	// vars := mux.Vars(r) / get the deviceID
+	deviceId := "1111aaaa"
+
+	pl := bson.A{bson.D{{"$match", bson.D{{"device_id", deviceId}}}}, bson.D{{"$group", bson.D{{"_id", bson.D{{"year", bson.D{{"$year", "$timestamp"}}}, {"month", bson.D{{"$month", "$timestamp"}}}, {"day", bson.D{{"$dayOfMonth", "$timestamp"}}}}}, {"count", bson.D{{"$sum", 1}}}}}}}
+
+	cur, err := e.db.Collection("events").Aggregate(context.Background(), pl)
+
+	if err != nil {
+		fmt.Println("Error")
+		fmt.Println(err)
+	}
+	defer cur.Close(context.Background())
+
+	counter := 0
+	total := 0
+	for cur.Next(context.Background()) {
+		elem := GAVPDResponse{}
+
+		err = cur.Decode(&elem)
+
+		if err != nil {
+			// error
+		}
+
+		total += elem.Count
+		counter++ // increment counter for every day
+	}
+
+	ret := struct {
+		Success bool
+		Data    int
+	}{}
+	ret.Success = true
+	ret.Data = total / counter
+
+	json.NewEncoder(w).Encode(ret)
 }
 
 // GET
@@ -95,3 +143,6 @@ func (e *Endpoints) getTrafficHistory(w http.ResponseWriter, r *http.Request) {
 	// TODO
 	// Get a table with history (by day) of how many people, what kind of people came into the store. Past ~10 days?
 }
+
+// DEMO Current number of people in the store
+// DEMO Get Last
