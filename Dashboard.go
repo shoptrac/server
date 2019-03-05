@@ -17,8 +17,17 @@ type DateID struct {
 	Day   int32 `bson:"day"`
 }
 
+type HourID struct {
+	Hour int32 `bson:"hour"`
+}
+
 type GAVPDResponse struct {
 	ID    DateID `bson:"_id"`
+	Count int    `bson:"count"`
+}
+
+type GPHResponse struct {
+	ID    HourID `bson:"_id"`
 	Count int    `bson:"count"`
 }
 
@@ -127,7 +136,7 @@ func (e *Endpoints) getAverageVisitsPD(w http.ResponseWriter, r *http.Request) {
 		Data    int
 	}{}
 	ret.Success = true
-	ret.Data = total / counter
+	ret.Data = (total / 2) / counter
 
 	json.NewEncoder(w).Encode(ret)
 }
@@ -136,6 +145,73 @@ func (e *Endpoints) getAverageVisitsPD(w http.ResponseWriter, r *http.Request) {
 func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 	// TODO
 	// Get average # of people in the store broken up by hours of the day (9-5)
+	// Number of people in the store NOT how many people entered at that time
+
+	// Hour will be in UTC so need to -5 from it.
+
+	deviceId := "1111aaaa"
+
+	// eeMap := make(map[int32])
+	eeMap := make([]map[string]int, 23)
+
+	// Entering
+	pl := bson.A{bson.D{{"$match", bson.D{{"device_id", deviceId}, {"action", 0}}}}, bson.D{{"$group", bson.D{{"_id", bson.D{{"hour", bson.D{{"$hour", "$timestamp"}}}}}, {"count", bson.D{{"$sum", 1}}}}}}, bson.D{{"$sort", bson.D{{"_id.hour", 1}}}}}
+	cur, err := e.db.Collection("events").Aggregate(context.Background(), pl)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		elem := GPHResponse{}
+
+		err = cur.Decode(&elem)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		eeMap[elem.ID.Hour-5] = make(map[string]int)
+		eeMap[elem.ID.Hour-5]["enter"] = elem.Count
+	}
+
+	// Exiting
+	pl = bson.A{bson.D{{"$match", bson.D{{"device_id", deviceId}, {"action", 1}}}}, bson.D{{"$group", bson.D{{"_id", bson.D{{"hour", bson.D{{"$hour", "$timestamp"}}}}}, {"count", bson.D{{"$sum", 1}}}}}}, bson.D{{"$sort", bson.D{{"_id.hour", 1}}}}}
+	cur, err = e.db.Collection("events").Aggregate(context.Background(), pl)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		elem := GPHResponse{}
+
+		err = cur.Decode(&elem)
+		if err != nil {
+			// error
+		}
+
+		eeMap[elem.ID.Hour-5]["exit"] = elem.Count
+	}
+
+	carryOver := 0
+	trafficMap := make(map[int]int)
+	for i := range eeMap {
+		if eeMap[i] != nil {
+			trafficMap[i] = eeMap[i]["enter"] + carryOver
+			carryOver = carryOver + (eeMap[i]["enter"] - eeMap[i]["exit"])
+		}
+	}
+
+	ret := struct {
+		Data    map[int]int
+		Success bool
+	}{}
+	ret.Data = trafficMap
+	ret.Success = true
+
+	json.NewEncoder(w).Encode(ret)
 }
 
 // GET
@@ -144,5 +220,5 @@ func (e *Endpoints) getTrafficHistory(w http.ResponseWriter, r *http.Request) {
 	// Get a table with history (by day) of how many people, what kind of people came into the store. Past ~10 days?
 }
 
-// DEMO Current number of people in the store
-// DEMO Get Last
+// DEMO Current number of people in the store !
+// DEMO Get Last profile
