@@ -1,7 +1,5 @@
 # server
 
-### Go uses 2 space TABS.
-
 Go packages you will need
 ```
 go get gopkg.in/yaml.v2
