@@ -53,11 +53,9 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 	ret := struct {
 		Success bool
 	}{}
-
 	ret.Success = true
 
 	err := decoder.Decode(&params)
-
 	events := e.db.Collection("events")
 
 	_, err = events.InsertOne(context.Background(),
@@ -72,8 +70,7 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Attempt NUM_RETRIES times to send out the requests, sometimes there's random issues
 	for attempt <= NUM_RETRIES {
-		res, _ := http.PostForm(e.Fau, url.Values{"api_key": {e.Fak}, "api_secret": {e.Fas}, "return_attributes": {"gender,age"},
-			"image_base64": {params.Image}})
+		res, _ := http.PostForm(e.Fau, url.Values{"api_key": {e.Fak}, "api_secret": {e.Fas}, "return_attributes": {"gender,age"}, "image_base64": {params.Image}})
 
 		defer res.Body.Close()
 
@@ -93,7 +90,6 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 				log.Fatal(body.Error)
 				break
 			}
-
 			continue
 		}
 
@@ -104,12 +100,10 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 
 		age := body.Faces[0].Atbs.Age["value"]
 		sex := body.Faces[0].Atbs.Sex["value"]
-
 		profiles := e.db.Collection("profiles")
 
 		_, err = profiles.InsertOne(context.Background(),
-			bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0),
-				"age": age, "sex": sex})
+			bson.M{"device_id": params.DeviceID, "timestamp": time.Unix(params.Timestamp/1000, 0), "age": age, "sex": sex})
 
 		break
 	}
