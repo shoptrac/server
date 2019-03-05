@@ -5,10 +5,15 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+const ENTER = 0
+const LEAVE = 1
+const NUM_RETRIES = 3
 
 // GET
 func (e *Endpoints) openLongPoll(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +29,16 @@ func (e *Endpoints) openLongPoll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(controlCode)
 }
 
+// Types used for Face++ requests
+type Attributes struct {
+	Sex map[string]string `json:"gender"`
+	Age map[string]int    `json:"age"`
+}
+
+type Face struct {
+	Atbs Attributes `json:"attributes"`
+}
+
 // POST
 func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
@@ -32,6 +47,7 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 		DeviceID  string `json:"device_id"`
 		Action    int    `json:"action"`
 		Timestamp int64  `json:"timestamp"`
+		Image     string `json:"image"`
 	}{}
 
 	ret := struct {
@@ -40,21 +56,57 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 	ret.Success = true
 
 	err := decoder.Decode(&params)
+	events := e.db.Collection("events")
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	collection := e.db.Collection("events")
-
-	_, err = collection.InsertOne(context.Background(),
+	_, err = events.InsertOne(context.Background(),
 		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0)})
 
-	if err != nil {
-		ret.Success = false
+	if params.Action == ENTER {
+		json.NewEncoder(w).Encode(ret)
+		return
 	}
 
-	// ADD WEBSOCKETS FOR LIVE DEMO
+	attempt := 1
+
+	// Attempt NUM_RETRIES times to send out the requests, sometimes there's random issues
+	for attempt <= NUM_RETRIES {
+		res, _ := http.PostForm(e.Fau, url.Values{"api_key": {e.Fak}, "api_secret": {e.Fas}, "return_attributes": {"gender,age"}, "image_base64": {params.Image}})
+
+		defer res.Body.Close()
+
+		body := struct {
+			Faces []Face `json:"faces"`
+			Error string `json:"error_message"`
+		}{}
+
+		decoder = json.NewDecoder(res.Body)
+		err = decoder.Decode(&body)
+
+		if err != nil || len(body.Error) > 0 {
+			attempt += 1
+
+			if attempt == 4 {
+				ret.Success = false
+				log.Fatal(body.Error)
+				break
+			}
+			continue
+		}
+
+		if len(body.Faces) == 0 {
+			ret.Success = false
+			break
+		}
+
+		age := body.Faces[0].Atbs.Age["value"]
+		sex := body.Faces[0].Atbs.Sex["value"]
+		profiles := e.db.Collection("profiles")
+
+		_, err = profiles.InsertOne(context.Background(),
+			bson.M{"device_id": params.DeviceID, "timestamp": time.Unix(params.Timestamp/1000, 0), "age": age, "sex": sex})
+
+		break
+	}
 
 	json.NewEncoder(w).Encode(ret)
 }
