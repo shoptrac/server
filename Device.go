@@ -45,7 +45,37 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 
 	params := struct {
 		DeviceID  string `json:"device_id"`
+		Timestamp int64  `json:"timestamp"`
 		Action    int    `json:"action"`
+	}{}
+
+	ret := struct {
+		Success bool
+	}{}
+	ret.Success = true
+
+	err := decoder.Decode(&params)
+
+    if (err != nil) {
+        ret.Success = false
+	    json.NewEncoder(w).Encode(ret)
+        return
+    }
+
+	events := e.db.Collection("events")
+
+	_, err = events.InsertOne(context.Background(),
+		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0)})
+
+	json.NewEncoder(w).Encode(ret)
+}
+
+// POST
+func (e *Endpoints) postImage(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	params := struct {
+		DeviceID  string `json:"device_id"`
 		Timestamp int64  `json:"timestamp"`
 		Image     string `json:"image"`
 	}{}
@@ -56,15 +86,7 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 	ret.Success = true
 
 	err := decoder.Decode(&params)
-	events := e.db.Collection("events")
-
-	_, err = events.InsertOne(context.Background(),
-		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0)})
-
-	if params.Action == ENTER {
-		json.NewEncoder(w).Encode(ret)
-		return
-	}
+	profiles := e.db.Collection("profiles")
 
 	attempt := 1
 
@@ -100,7 +122,6 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 
 		age := body.Faces[0].Atbs.Age["value"]
 		sex := body.Faces[0].Atbs.Sex["value"]
-		profiles := e.db.Collection("profiles")
 
 		_, err = profiles.InsertOne(context.Background(),
 			bson.M{"device_id": params.DeviceID, "timestamp": time.Unix(params.Timestamp/1000, 0), "age": age, "sex": sex})
