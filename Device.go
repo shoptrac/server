@@ -116,7 +116,6 @@ func (e *Endpoints) postImage(w http.ResponseWriter, r *http.Request) {
 
 			if attempt == 4 {
 				ret.Success = false
-				log.Fatal(body.Error)
 				break
 			}
 			continue
