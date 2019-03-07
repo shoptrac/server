@@ -72,6 +72,7 @@ func (e *Endpoints) RegisterEndpoints() {
 	// Device Endpoints
 	e.Rtr.HandleFunc("/device/olp", e.openLongPoll).Methods("GET")
 	e.Rtr.HandleFunc("/device/event", e.postEvent).Methods("POST")
+	e.Rtr.HandleFunc("/device/image", e.postImage).Methods("POST")
 }
 
 func (e *Endpoints) setLongPoll(lp *LongPoll) {
