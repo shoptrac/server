@@ -56,11 +56,11 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 
 	err := decoder.Decode(&params)
 
-    if (err != nil) {
-        ret.Success = false
-	    json.NewEncoder(w).Encode(ret)
-        return
-    }
+	if err != nil {
+		ret.Success = false
+		json.NewEncoder(w).Encode(ret)
+		return
+	}
 
 	events := e.db.Collection("events")
 

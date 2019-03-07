@@ -69,6 +69,9 @@ func (e *Endpoints) RegisterEndpoints() {
 	e.Rtr.Handle("/dashboard/peakHours", e.JWTMW.Handler(http.HandlerFunc(e.getPeakHours))).Methods("GET")
 	e.Rtr.Handle("/dashboard/history", e.JWTMW.Handler(http.HandlerFunc(e.getTrafficHistory))).Methods("GET")
 
+	// Dashboard but specific for Live demo
+	e.Rtr.Handle("/dashboard/latestProfile", e.JWTMW.Handler(http.HandlerFunc(e.getLatestProfile))).Methods("GET")
+
 	// Device Endpoints
 	e.Rtr.HandleFunc("/device/olp", e.openLongPoll).Methods("GET")
 	e.Rtr.HandleFunc("/device/event", e.postEvent).Methods("POST")
