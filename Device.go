@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -67,6 +68,12 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 	_, err = events.InsertOne(context.Background(),
 		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0)})
 
+	if e.lp != nil {
+		e.lp.ch <- "2" //
+	} else {
+		fmt.Println("No LP open")
+	}
+
 	json.NewEncoder(w).Encode(ret)
 }
 
@@ -127,6 +134,12 @@ func (e *Endpoints) postImage(w http.ResponseWriter, r *http.Request) {
 			bson.M{"device_id": params.DeviceID, "timestamp": time.Unix(params.Timestamp/1000, 0), "age": age, "sex": sex})
 
 		break
+	}
+
+	if e.lp != nil {
+		e.lp.ch <- "1" //
+	} else {
+		fmt.Println("No LP open")
 	}
 
 	json.NewEncoder(w).Encode(ret)

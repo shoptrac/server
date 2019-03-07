@@ -22,6 +22,10 @@ type HourID struct {
 	Hour int32 `bson:"hour"`
 }
 
+type SexID struct {
+	Sex string `bson:"sex"`
+}
+
 type GAVPDResponse struct {
 	ID    DateID `bson:"_id"`
 	Count int    `bson:"count"`
@@ -30,6 +34,11 @@ type GAVPDResponse struct {
 type GPHResponse struct {
 	ID    HourID `bson:"_id"`
 	Count int    `bson:"count"`
+}
+
+type GSDResponse struct {
+	ID    SexID `bson:"_id"`
+	Count int   `bson:"count"`
 }
 
 // GET
@@ -127,7 +136,6 @@ func (e *Endpoints) getAverageVisitsPD(w http.ResponseWriter, r *http.Request) {
 	cur, err := e.db.Collection("events").Aggregate(context.Background(), pl)
 
 	if err != nil {
-		fmt.Println("Error")
 		fmt.Println(err)
 	}
 	defer cur.Close(context.Background())
@@ -165,8 +173,6 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 
 	// Hour will be in UTC so need to -5 from it.
 	deviceId := "1111aaaa"
-
-	// eeMap := make(map[int32])
 	eeMap := make([]map[string]int, 23)
 
 	// Entering
@@ -233,6 +239,54 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 func (e *Endpoints) getTrafficHistory(w http.ResponseWriter, r *http.Request) {
 	// TODO
 	// Get a table with history (by day) of how many people, what kind of people came into the store. Past ~10 days?
+}
+
+func (e *Endpoints) getSexDist(w http.ResponseWriter, r *http.Request) {
+	deviceId := "1111aaaa"
+	retData := make(map[string]int)
+
+	pl := bson.A{bson.D{{"$match", bson.D{{"device_id", deviceId}}}}, bson.D{{"$group", bson.D{{"_id", bson.D{{"sex", "$sex"}}}, {"count", bson.D{{"$sum", 1}}}}}}}
+	cur, err := e.db.Collection("profiles").Aggregate(context.Background(), pl)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		elem := GSDResponse{}
+
+		err = cur.Decode(&elem)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		retData[elem.ID.Sex] = elem.Count
+	}
+
+	ret := struct {
+		Success bool
+		Data    map[string]int
+	}{}
+	ret.Success = true
+	ret.Data = retData
+
+	json.NewEncoder(w).Encode(ret)
+}
+
+func (e *Endpoints) getAgeDist(w http.ResponseWriter, r *http.Request) {
+	// deviceId := "1111aaaa"
+
+	// pl := bson.A{bson.D{{"$match", bson.D{  {"device_id", deviceId}, {"sex", "Female"}}}}}
+
+	// cur, err := e.db.Collection("events").Aggregate(context.Background(), pl)
+
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// defer cur.Close(context.Background())
+
+	// take the age and divide by 10 (integer division), this will give buckets
 }
 
 // DEMO Current number of people in the store !
