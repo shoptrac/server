@@ -15,7 +15,7 @@ import (
 )
 
 type LongPoll struct {
-	ch (chan int)
+	ch (chan string)
 }
 
 type Endpoints struct {
@@ -62,7 +62,8 @@ func (e *Endpoints) RegisterEndpoints() {
 
 	// Dashboard Endpoints
 	e.Rtr.HandleFunc("/dashboard/login", e.loginUser).Methods("POST")
-	e.Rtr.Handle("/dashboard/control", e.JWTMW.Handler(http.HandlerFunc(e.sendControl))).Methods("GET")
+	e.Rtr.Handle("/dashboard/olp", e.JWTMW.Handler(http.HandlerFunc(e.openLongPollDashboard))).Methods("GET")
+	e.Rtr.Handle("/dashboard/control/{signal}", e.JWTMW.Handler(http.HandlerFunc(e.sendControl))).Methods("GET")
 	e.Rtr.Handle("/dashboard/averageDuration", e.JWTMW.Handler(http.HandlerFunc(e.getAverageDuration))).Methods("GET")
 	e.Rtr.Handle("/dashboard/averageVisitsPD", e.JWTMW.Handler(http.HandlerFunc(e.getAverageVisitsPD))).Methods("GET")
 	e.Rtr.Handle("/dashboard/peakHours", e.JWTMW.Handler(http.HandlerFunc(e.getPeakHours))).Methods("GET")

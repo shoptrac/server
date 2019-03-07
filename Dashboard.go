@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -32,9 +33,24 @@ type GPHResponse struct {
 }
 
 // GET
+func (e *Endpoints) openLongPollDashboard(w http.ResponseWriter, r *http.Request) {
+	// check device id?
+	ch := make(chan string)
+	lp := &LongPoll{
+		ch: ch,
+	}
+
+	e.setLongPoll(lp)
+	controlCode := <-ch
+	json.NewEncoder(w).Encode(controlCode)
+}
+
+// GET
 func (e *Endpoints) sendControl(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
 	if e.lp != nil {
-		e.lp.ch <- 1
+		e.lp.ch <- vars["signal"]
 		json.NewEncoder(w).Encode("Successfully closed")
 	} else {
 		json.NewEncoder(w).Encode("No LP open")
@@ -148,7 +164,6 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 	// Number of people in the store NOT how many people entered at that time
 
 	// Hour will be in UTC so need to -5 from it.
-
 	deviceId := "1111aaaa"
 
 	// eeMap := make(map[int32])
