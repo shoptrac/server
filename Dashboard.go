@@ -41,6 +41,13 @@ type GSDResponse struct {
 	Count int   `bson:"count"`
 }
 
+type GADResponse struct {
+	DeviceID string `bson:"device_id"`
+	// Timestamp type `bson:"timestamp"`
+	Age int    `bson:"age"`
+	Sex string `bson:"sex"`
+}
+
 // GET
 func (e *Endpoints) openLongPollDashboard(w http.ResponseWriter, r *http.Request) {
 	// check device id?
@@ -275,18 +282,38 @@ func (e *Endpoints) getSexDist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Endpoints) getAgeDist(w http.ResponseWriter, r *http.Request) {
-	// deviceId := "1111aaaa"
+	deviceId := "1111aaaa"
 
-	// pl := bson.A{bson.D{{"$match", bson.D{  {"device_id", deviceId}, {"sex", "Female"}}}}}
+	filter := bson.D{{"device_id", deviceId}}
 
-	// cur, err := e.db.Collection("events").Aggregate(context.Background(), pl)
+	retData := make(map[int]int)
 
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// defer cur.Close(context.Background())
+	cur, err := e.db.Collection("profiles").Find(context.Background(), filter)
 
-	// take the age and divide by 10 (integer division), this will give buckets
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		elem := GADResponse{}
+
+		err = cur.Decode(&elem)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		retData[elem.Age/10] += 1
+	}
+
+	ret := struct {
+		Success bool
+		Data    map[int]int
+	}{}
+	ret.Success = true
+	ret.Data = retData
+
+	json.NewEncoder(w).Encode(ret)
 }
 
 // DEMO Current number of people in the store !
