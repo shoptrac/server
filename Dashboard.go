@@ -26,6 +26,13 @@ type SexID struct {
 	Sex string `bson:"sex"`
 }
 
+type DateSexID struct {
+	Year  int32  `bson:"year"`
+	Month int32  `bson:"month"`
+	Day   int32  `bson:"day"`
+	Sex   string `bson:"sex"`
+}
+
 type GAVPDResponse struct {
 	ID    DateID `bson:"_id"`
 	Count int    `bson:"count"`
@@ -46,6 +53,17 @@ type GADResponse struct {
 	// Timestamp type `bson:"timestamp"`
 	Age int    `bson:"age"`
 	Sex string `bson:"sex"`
+}
+
+type GTHAgeResponse struct {
+	ID     DateID `bson:"_id"`
+	Count  int    `bson:"count"`
+	AgeSum int    `bson:"age"`
+}
+
+type GTHSexResponse struct {
+	ID    DateSexID `bson:"_id"`
+	Count int       `bson:"count"`
 }
 
 // GET
@@ -246,8 +264,70 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 func (e *Endpoints) getTrafficHistory(w http.ResponseWriter, r *http.Request) {
 	// TODO
 	// Get a table with history (by day) of how many people, what kind of people came into the store. Past ~10 days?
+
+	deviceId := "1111aaaa"
+
+	retData := make(map[string]map[string]int)
+
+	pl := bson.A{bson.D{{"$match", bson.D{{"device_id", deviceId}}}}, bson.D{{"$group", bson.D{{"_id", bson.D{{"year", bson.D{{"$year", "$timestamp"}}}, {"month", bson.D{{"$month", "$timestamp"}}}, {"day", bson.D{{"$dayOfMonth", "$timestamp"}}}}}, {"count", bson.D{{"$sum", 1}}}, {"age", bson.D{{"$sum", "$age"}}}}}}}
+
+	cur, err := e.db.Collection("profiles").Aggregate(context.Background(), pl)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		elem := GTHAgeResponse{}
+		retDataPnt := make(map[string]int)
+
+		err = cur.Decode(&elem)
+
+		if err != nil {
+			// error
+		}
+
+		retDataPnt["count"] = elem.Count
+		retDataPnt["avgAge"] = elem.AgeSum / elem.Count
+
+		retData[fmt.Sprintf("%d-%d-%d", elem.ID.Day, elem.ID.Month, elem.ID.Year)] = retDataPnt
+	}
+
+	pl = bson.A{bson.D{{"$match", bson.D{{"device_id", deviceId}}}}, bson.D{{"$group", bson.D{{"_id", bson.D{{"year", bson.D{{"$year", "$timestamp"}}}, {"month", bson.D{{"$month", "$timestamp"}}}, {"day", bson.D{{"$dayOfMonth", "$timestamp"}}}, {"sex", "$sex"}}}, {"count", bson.D{{"$sum", 1}}}}}}}
+	cur, err = e.db.Collection("profiles").Aggregate(context.Background(), pl)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		elem := GTHSexResponse{}
+		err = cur.Decode(&elem)
+
+		if err != nil {
+			// error
+		}
+
+		if elem.ID.Sex == "Female" {
+			retData[fmt.Sprintf("%d-%d-%d", elem.ID.Day, elem.ID.Month, elem.ID.Year)]["females"] = elem.Count
+		} else if elem.ID.Sex == "Male" {
+			retData[fmt.Sprintf("%d-%d-%d", elem.ID.Day, elem.ID.Month, elem.ID.Year)]["males"] = elem.Count
+		}
+	}
+
+	ret := struct {
+		Data    map[string]map[string]int
+		Success bool
+	}{}
+	ret.Data = retData
+	ret.Success = true
+
+	json.NewEncoder(w).Encode(ret)
 }
 
+// GET
 func (e *Endpoints) getSexDist(w http.ResponseWriter, r *http.Request) {
 	deviceId := "1111aaaa"
 	retData := make(map[string]int)
