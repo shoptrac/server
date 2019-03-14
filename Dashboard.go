@@ -238,7 +238,13 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 			// error
 		}
 
+		if eeMap[elem.ID.Hour-5] == nil {
+			
+			eeMap[elem.ID.Hour-5] = make(map[string]int)
+		}
+	
 		eeMap[elem.ID.Hour-5]["exit"] = elem.Count
+		
 	}
 
 	carryOver := 0
