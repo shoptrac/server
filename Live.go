@@ -49,7 +49,7 @@ func (e *Endpoints) getLatestProfile(w http.ResponseWriter, r *http.Request) {
 func (e *Endpoints) getCurrentCount(w http.ResponseWriter, r *http.Request) {
 	deviceId := "1111aaaa"
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	// Entering
 	pl := bson.A{bson.D{{"$match", bson.D{{"device_id", deviceId}, {"action", 0}}}}, bson.D{{"$group", bson.D{{"_id", bson.D{{"year", bson.D{{"$year", "$timestamp"}}}, {"month", bson.D{{"$month", "$timestamp"}}}, {"day", bson.D{{"$dayOfMonth", "$timestamp"}}}}}, {"count", bson.D{{"$sum", 1}}}}}}}
