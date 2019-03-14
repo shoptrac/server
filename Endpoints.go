@@ -74,6 +74,7 @@ func (e *Endpoints) RegisterEndpoints() {
 
 	// Dashboard but specific for Live demo
 	e.Rtr.Handle("/dashboard/latestProfile", e.JWTMW.Handler(http.HandlerFunc(e.getLatestProfile))).Methods("GET")
+	e.Rtr.Handle("/dashboard/currentCount", e.JWTMW.Handler(http.HandlerFunc(e.getCurrentCount))).Methods("GET")
 
 	// Device Endpoints
 	e.Rtr.HandleFunc("/device/olp", e.openLongPoll).Methods("GET")
