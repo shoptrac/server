@@ -249,12 +249,14 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 
 	carryOver := 0
 	trafficMap := make(map[int]int)
+	fmt.Println("asd")
 	for i := range eeMap {
-		if eeMap[i] != nil && eeMap[i]["enter"] != nil && eeMap[i]["exit"]{
+		if eeMap[i] != nil {
 			trafficMap[i] = eeMap[i]["enter"] + carryOver
 			carryOver = carryOver + (eeMap[i]["enter"] - eeMap[i]["exit"])
 		}
 	}
+	fmt.Println("aa")
 
 	ret := struct {
 		Data    map[int]int
