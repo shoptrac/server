@@ -65,7 +65,7 @@ func (e *Endpoints) postEvent(w http.ResponseWriter, r *http.Request) {
 	events := e.db.Collection("events")
 
 	_, err = events.InsertOne(context.Background(),
-		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp/1000, 0)})
+		bson.M{"device_id": params.DeviceID, "action": params.Action, "timestamp": time.Unix(params.Timestamp, 0)})
 
 	if e.lp != nil {
 		e.lp.ch <- "2" //
@@ -129,7 +129,7 @@ func (e *Endpoints) postImage(w http.ResponseWriter, r *http.Request) {
 		sex := body.Faces[0].Atbs.Sex["value"]
 
 		_, err = profiles.InsertOne(context.Background(),
-			bson.M{"device_id": params.DeviceID, "timestamp": time.Unix(params.Timestamp/1000, 0), "age": age, "sex": sex})
+			bson.M{"device_id": params.DeviceID, "timestamp": time.Unix(params.Timestamp, 0), "age": age, "sex": sex})
 
 		break
 	}
