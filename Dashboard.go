@@ -238,6 +238,8 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 			// error
 		}
 
+		fmt.Println(eeMap[elem.ID.Hour-5])
+
 		if eeMap[elem.ID.Hour-5] == nil {
 			
 			eeMap[elem.ID.Hour-5] = make(map[string]int)
