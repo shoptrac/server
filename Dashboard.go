@@ -250,7 +250,7 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 	carryOver := 0
 	trafficMap := make(map[int]int)
 	for i := range eeMap {
-		if eeMap[i] != nil {
+		if eeMap[i] != nil && eeMap[i]["enter"] != nil && eeMap[i]["exit"]{
 			trafficMap[i] = eeMap[i]["enter"] + carryOver
 			carryOver = carryOver + (eeMap[i]["enter"] - eeMap[i]["exit"])
 		}
