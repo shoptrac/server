@@ -242,6 +242,7 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 			
 			eeMap[elem.ID.Hour-5] = make(map[string]int)
 		}
+		fmt.Println(eeMap[elem.ID.Hour-5])
 	
 		eeMap[elem.ID.Hour-5]["exit"] = elem.Count
 		
@@ -249,14 +250,12 @@ func (e *Endpoints) getPeakHours(w http.ResponseWriter, r *http.Request) {
 
 	carryOver := 0
 	trafficMap := make(map[int]int)
-	fmt.Println("asd")
 	for i := range eeMap {
 		if eeMap[i] != nil {
 			trafficMap[i] = eeMap[i]["enter"] + carryOver
 			carryOver = carryOver + (eeMap[i]["enter"] - eeMap[i]["exit"])
 		}
 	}
-	fmt.Println("aa")
 
 	ret := struct {
 		Data    map[int]int
